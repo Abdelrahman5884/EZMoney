@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Models\User;
+use App\Models\Wallet;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,8 +19,14 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
-    {
-        //
-    }
+
+public function boot()
+{
+    User::created(function ($user) {
+        Wallet::create([
+            'user_id' => $user->id,
+            'balance' => 0
+        ]);
+    });
+}
 }

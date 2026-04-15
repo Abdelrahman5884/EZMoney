@@ -8,6 +8,7 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Wallet\WalletController;
 use App\Http\Controllers\Security\PinController;
 
 // ================= AUTH =================
@@ -27,5 +28,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/set-pin', [PinController::class, 'setPin']);
     Route::post('/verify-pin', [PinController::class, 'verifyPin']);
+
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/wallet', [WalletController::class, 'index']);
+    Route::post('/wallet/add', [WalletController::class, 'addBalance']);
 
 });
