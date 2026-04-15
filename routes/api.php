@@ -8,6 +8,7 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Security\PinController;
 
 // ================= AUTH =================
 
@@ -21,3 +22,10 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::post('/set-pin', [PinController::class, 'setPin']);
+    Route::post('/verify-pin', [PinController::class, 'verifyPin']);
+
+});

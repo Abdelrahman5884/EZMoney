@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Services\Auth;
 
@@ -10,11 +10,10 @@ use App\Services\OTP\OtpService;
 use App\Services\Notification\NotificationService;
 use Laravel\Sanctum\PersonalAccessToken;
 
-
 class AuthService
 {
-    private $otpService;
-    private $notificationService;
+    private OtpService $otpService;
+    private NotificationService $notificationService;
 
     public function __construct(
         OtpService $otpService,
@@ -26,94 +25,119 @@ class AuthService
 
     // ================= REGISTER =================
 
-   public function register($data)
-{
-    $identifier = $data['email'] ?? $data['phone'];
+    public function register($data)
+    {
+        $identifier = $data['email'] ?? $data['phone'];
 
-    if (isset($data['email']) && User::where('email', $data['email'])->exists()) {
+        // 🔒 Check duplicates
+        if (isset($data['email']) && User::where('email', $data['email'])->exists()) {
+            return [
+                'status' => false,
+                'message' => 'Email already registered'
+            ];
+        }
+
+        if (isset($data['phone']) && User::where('phone', $data['phone'])->exists()) {
+            return [
+                'status' => false,
+                'message' => 'Phone already registered'
+            ];
+        }
+
+        // 🔒 Prevent OTP spam (60 sec cooldown)
+        $recentOtp = Otp::where('identifier', $identifier)
+            ->where('created_at', '>', now()->subSeconds(60))
+            ->first();
+
+        if ($recentOtp) {
+            return [
+                'status' => false,
+                'message' => 'Please wait before requesting another OTP'
+            ];
+        }
+
+        // ✅ Generate OTP
+        $otp = $this->otpService->generate($identifier, 'register', $data);
+
+        // ✅ Send OTP (Email + SMS)
+        $this->notificationService->sendOtp($data, $otp, 'register');
+
         return [
-            'status' => false,
-            'message' => 'Email already registered'
+            'status' => true,
+            'message' => 'OTP sent successfully'
         ];
     }
-
-    if (isset($data['phone']) && User::where('phone', $data['phone'])->exists()) {
-        return [
-            'status' => false,
-            'message' => 'Phone already registered'
-        ];
-    }
-
-    $otp = $this->otpService->generate($identifier, 'register', $data);
-
-    $this->notificationService->sendOtp($data, $otp, 'register');
-
-    return [
-        'status' => true,
-        'message' => 'OTP sent successfully'
-    ];
-}
 
     // ================= VERIFY OTP =================
-public function verifyOtp($data, $type = 'register')
-{
-    $identifier = $data['email'] ?? $data['phone'];
 
-    $otp = $this->otpService->verify($identifier, $data['otp'], $type);
+    public function verifyOtp($data, $type = 'register')
+    {
+        $identifier = $data['email'] ?? $data['phone'];
 
-    if (!$otp) return null;
+        $otp = $this->otpService->verify($identifier, $data['otp'], $type);
 
-    // ================= REGISTER =================
-    if ($type === 'register') {
+        if (!$otp) return null;
 
-        $userData = json_decode($otp->data, true);
+        // ================= REGISTER =================
+        if ($type === 'register') {
 
-        $user = User::create([
-            'name' => $userData['name'],
-            'email' => $userData['email'],
-            'phone' => $userData['phone'],
-            'password' => bcrypt($userData['password'])
-        ]);
+            $userData = json_decode($otp->data, true);
 
-        $otp->delete();
+            $user = User::create([
+                'name' => $userData['name'],
+                'email' => $userData['email'],
+                'phone' => $userData['phone'],
+                'password' => bcrypt($userData['password'])
+            ]);
 
-        $user->token = $user->createToken('auth_token')->plainTextToken;
+            $user->token = $user->createToken('auth_token')->plainTextToken;
 
-        return $user;
+            return $user;
+        }
+
+        // ================= RESET =================
+        if ($type === 'reset') {
+
+            $user = User::where('email', $identifier)->first();
+
+            if (!$user) return null;
+
+            $user->token = $user->createToken('reset_token')->plainTextToken;
+
+            return $user;
+        }
+
+        return null;
     }
-
-    // ================= RESET =================
-    if ($type === 'reset') {
-
-        $user = User::where('email', $identifier)->first();
-        $user->token = $user->createToken('reset_token')->plainTextToken;
-        if (!$user) return null;
-
-        $otp->delete();
-
-        $user->token = $user->createToken('auth_token')->plainTextToken;
-
-        return $user;
-    }
-
-    return null;
-}
 
     // ================= RESEND OTP =================
 
-public function resendOtp($data, $type = 'register')
-{
-    $identifier = $data['email'] ?? $data['phone'];
+    public function resendOtp($data, $type = 'register')
+    {
+        $identifier = $data['email'] ?? $data['phone'];
 
-    $otp = $this->otpService->generate($identifier, $type, $data);
+        // 🔒 Prevent spam
+        $recentOtp = Otp::where('identifier', $identifier)
+            ->where('created_at', '>', now()->subSeconds(60))
+            ->first();
 
-    $this->notificationService->sendOtp($data, $otp, $type);
+        if ($recentOtp) {
+            return [
+                'status' => false,
+                'message' => 'Please wait before requesting another OTP'
+            ];
+        }
 
-    return [
-        'status' => true,
-        'message' => 'OTP resent successfully'
-    ];
-}
+        $otp = $this->otpService->generate($identifier, $type, $data);
+
+        $this->notificationService->sendOtp($data, $otp, $type);
+
+        return [
+            'status' => true,
+            'message' => 'OTP resent successfully'
+        ];
+    }
+
     // ================= LOGIN =================
 
     public function login($data)
@@ -127,6 +151,7 @@ public function resendOtp($data, $type = 'register')
         }
 
         $user = Auth::user();
+
         $user->token = $user->createToken('auth_token')->plainTextToken;
 
         return $user;
@@ -134,9 +159,20 @@ public function resendOtp($data, $type = 'register')
 
     // ================= FORGOT PASSWORD =================
 
-public function forgotPassword($data)
+   public function forgotPassword($data)
 {
-    $identifier = $data['email'];
+    $identifier = $data['email'] ?? $data['phone'];
+
+    $recentOtp = Otp::where('identifier', $identifier)
+        ->where('created_at', '>', now()->subSeconds(60))
+        ->first();
+
+    if ($recentOtp) {
+        return [
+            'status' => false,
+            'message' => 'Please wait before requesting another OTP'
+        ];
+    }
 
     $otp = $this->otpService->generate($identifier, 'reset');
 
@@ -144,35 +180,35 @@ public function forgotPassword($data)
 
     return [
         'status' => true,
-        'message' => 'OTP sent for password reset'
+        'message' => 'OTP sent successfully'
     ];
 }
     // ================= RESET PASSWORD =================
 
+    public function resetPassword($data)
+    {
+        $token = PersonalAccessToken::findToken($data['reset_token']);
 
-public function resetPassword($data)
-{
-    $token = PersonalAccessToken::findToken($data['reset_token']);
+        if (!$token) {
+            return null;
+        }
 
-    if (!$token) {
-        return null;
+        $user = $token->tokenable;
+
+        if (!$user) {
+            return null;
+        }
+
+        $user->update([
+            'password' => Hash::make($data['password'])
+        ]);
+
+        // 🔒 Delete token after use
+        $token->delete();
+
+        return [
+            'status' => true,
+            'message' => 'Password reset successfully'
+        ];
     }
-
-    $user = $token->tokenable;
-
-    if (!$user) {
-        return null;
-    }
-
-    $user->update([
-        'password' => Hash::make($data['password'])
-    ]);
-
-    $token->delete();
-
-    return [
-        'status' => true,
-        'message' => 'Password reset successfully'
-    ];
-}
 }

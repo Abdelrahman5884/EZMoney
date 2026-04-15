@@ -14,16 +14,29 @@ class ForgotPasswordRequest extends FormRequest
     public function rules()
     {
         return [
-            'email' => 'bail|required|email|exists:users,email',
+            'email' => 'nullable|email|exists:users,email',
+            'phone' => 'nullable|string|exists:users,phone',
         ];
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+
+            if (!$this->email && !$this->phone) {
+                $validator->errors()->add('identifier', 'Email or phone is required');
+            }
+
+        });
     }
 
     public function messages()
     {
         return [
-            'email.required' => 'Email is required',
             'email.email' => 'Invalid email format',
-            'email.exists' => 'This email is not registered in our system',
+            'email.exists' => 'This email is not registered',
+
+            'phone.exists' => 'This phone is not registered',
         ];
     }
 }

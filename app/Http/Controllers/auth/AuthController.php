@@ -30,36 +30,45 @@ class AuthController extends Controller
     {
         $response = $this->authService->register($request->validated());
 
+        if (!$response['status']) {
+            return response()->json($response, 400);
+        }
+
         return response()->json($response, 200);
     }
 
     // ================= VERIFY OTP =================
 
-public function verifyOtp(VerifyOtpRequest $request)
-{
-    $type = $request->input('type', 'register');
+    public function verifyOtp(VerifyOtpRequest $request)
+    {
+        $type = $request->input('type', 'register');
 
-    $user = $this->authService->verifyOtp($request->validated(), $type);
+        $user = $this->authService->verifyOtp($request->validated(), $type);
 
-    if (!$user) {
-        return response()->json([
-            'status' => false,
-            'message' => 'Invalid or expired OTP'
-        ], 400);
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid or expired OTP'
+            ], 400);
+        }
+
+        return new AuthResource($user, 'OTP verified successfully');
     }
 
-    return new AuthResource($user, 'OTP verified successfully');
-}
     // ================= RESEND OTP =================
 
-  public function resendOtp(ResendOtpRequest $request)
-{
-    $type = $request->input('type', 'register');
+    public function resendOtp(ResendOtpRequest $request)
+    {
+        $type = $request->input('type', 'register');
 
-    return response()->json(
-        $this->authService->resendOtp($request->validated(), $type)
-    );
-}
+        $response = $this->authService->resendOtp($request->validated(), $type);
+
+        if (!$response['status']) {
+            return response()->json($response, 400);
+        }
+
+        return response()->json($response, 200);
+    }
 
     // ================= LOGIN =================
 
@@ -83,6 +92,10 @@ public function verifyOtp(VerifyOtpRequest $request)
     {
         $response = $this->authService->forgotPassword($request->validated());
 
+        if (!$response['status']) {
+            return response()->json($response, 400);
+        }
+
         return response()->json($response, 200);
     }
 
@@ -95,7 +108,7 @@ public function verifyOtp(VerifyOtpRequest $request)
         if (!$response) {
             return response()->json([
                 'status' => false,
-                'message' => 'Invalid or expired OTP'
+                'message' => 'Invalid or expired reset token'
             ], 400);
         }
 

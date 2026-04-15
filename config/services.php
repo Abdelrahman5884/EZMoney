@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'brevo' => [
+    'key' => env('BREVO_API_KEY'),
+],
+
+'twilio' => [
+    'sid' => env('TWILIO_SID'),
+    'token' => env('TWILIO_TOKEN'),
+    'from' => env('TWILIO_FROM'),
+],
 ];

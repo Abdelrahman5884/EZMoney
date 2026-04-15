@@ -11,17 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('otps', function (Blueprint $table) {
+        Schema::create('wallets', function (Blueprint $table) {
             $table->id();
-            $table->string('identifier')->nullable(); 
-            $table->string('data')->nullable(); 
-            $table->string('code');
-            $table->string('type'); 
-            $table->timestamp('expires_at');
-            $table->integer('attempts')->default(0);
-
+            $table->foreignId('user_id')
+               ->unique()
+               ->constrained()
+               ->cascadeOnDelete();
+            $table->decimal('balance', 14, 2)->default(0);
+            $table->timestamp('last_transaction_at')->nullable();
             $table->timestamps();
-        });
+});
     }
 
     /**
@@ -29,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('otps');
+        Schema::dropIfExists('wallets');
     }
 };

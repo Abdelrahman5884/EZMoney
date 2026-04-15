@@ -2,31 +2,32 @@
 
 namespace App\Services\Notification;
 
-use Illuminate\Support\Facades\Mail;
-use App\Mail\SendOtpMail;
+use App\Services\BrevoMailService;
+use App\Services\Notification\SmsService;
 
 class NotificationService
 {
-    public function sendOtp($user, $otp, $type = 'verification')
-    {
-        // Email
-        if (!empty($user['email'])) {
-            Mail::to($user['email'])->send(new SendOtpMail($otp, $type));
-        }
+    protected $brevo;
+    protected $sms;
 
-        // Phone (SMS) - Placeholder
-        if (!empty($user['phone'])) {
-            $this->sendSms($user['phone'], $otp);
-        }
+    public function __construct(BrevoMailService $brevo, SmsService $sms)
+    {
+        $this->brevo = $brevo;
+        $this->sms = $sms;
     }
 
-    private function sendSms($phone, $otp)
-    {
-        // TODO: integrate with SMS provider (Twilio / Vodafone / etc)
-        // مثال:
-        // Http::post('sms-api', [...]);
+public function sendOtp($user, $otp, $type = 'verification')
+{
+    $smsResponse = null;
 
-        // مؤقتًا:
-        logger("OTP for $phone is $otp");
+    if (!empty($user['email'])) {
+        $this->brevo->sendOtp($user['email'], $otp);
     }
+
+    if (!empty($user['phone'])) {
+        $smsResponse = $this->sms->send($user['phone'], $otp);
+    }
+
+    return $smsResponse;
+}
 }

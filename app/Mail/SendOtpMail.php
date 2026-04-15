@@ -2,10 +2,14 @@
 
 namespace App\Mail;
 
+use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Queue\SerializesModels;
 
 class SendOtpMail extends Mailable
 {
+    use Queueable, SerializesModels;
+
     public $otp;
     public $type;
 
@@ -19,9 +23,13 @@ class SendOtpMail extends Mailable
     {
         return $this->subject(
                 $this->type === 'reset'
-                    ? 'Reset Your Password - EZMonay'
-                    : 'Verify Your Account - EZMonay'
+                    ? 'Reset Your Password - EZMoney'
+                    : 'Verify Your Account - EZMoney'
             )
-            ->markdown('emails.otp');
+            ->markdown('emails.otp')
+            ->with([
+                'otp' => $this->otp,
+                'type' => $this->type,
+            ]);
     }
 }

@@ -11,6 +11,7 @@ class Otp extends Model
         'code',
         'type',
         'data',
+        'attempts',
         'expires_at'
     ];
 }

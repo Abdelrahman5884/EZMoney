@@ -22,6 +22,9 @@ use HasApiTokens, HasFactory, Notifiable;
         'email',
         'password',
         'phone',
+        'transaction_pin',
+         'pin_attempts',
+        'pin_locked_until',
     ];
 
     /**
@@ -45,5 +48,9 @@ use HasApiTokens, HasFactory, Notifiable;
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class);
     }
 }
