@@ -35,5 +35,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/wallet', [WalletController::class, 'index']);
     Route::post('/wallet/add', [WalletController::class, 'addBalance']);
+    Route::post('/wallet/transfer', [WalletController::class, 'transfer']);
+});
+
+use App\Http\Controllers\Wallet\PaymentController;
+
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::post('/wallet/deposit', [PaymentController::class, 'deposit']);
+    Route::post('/wallet/withdraw', [WalletController::class, 'withdraw']);
 
 });
+
+Route::match(['GET', 'POST'], '/payment/webhook', [PaymentController::class, 'webhook']);
+Route::post('/payment/payout-webhook', [PaymentController::class, 'payoutWebhook']);

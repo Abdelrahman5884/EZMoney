@@ -44,4 +44,12 @@ return [
     'token' => env('TWILIO_TOKEN'),
     'from' => env('TWILIO_FROM'),
 ],
+
+'paymob' => [
+    'api_key' => env('PAYMOB_API_KEY'),
+    'card_integration_id' => env('PAYMOB_CARD_INTEGRATION_ID'),
+    'wallet_integration_id' => env('PAYMOB_WALLET_INTEGRATION_ID'),
+    'iframe_id' => env('PAYMOB_IFRAME_ID'),
+    'hmac' => env('PAYMOB_HMAC_SECRET'),
+],
 ];

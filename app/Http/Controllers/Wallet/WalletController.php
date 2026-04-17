@@ -6,19 +6,27 @@ use App\Http\Controllers\Controller;
 use App\Services\Wallet\WalletService;
 use App\Services\Wallet\WalletManager;
 use App\Http\Resources\Wallet\WalletResource;
-use App\Http\Requests\Wallet\AddBalanceRequest; // ✅ مهم
+use App\Http\Requests\Wallet\AddBalanceRequest; 
+use App\Services\Wallet\TransferService;
+use App\Http\Requests\Wallet\TransferRequest;
+use App\Http\Requests\Wallet\WithdrawRequest;
+use App\Models\Transaction;
 
 class WalletController extends Controller
 {
     protected $walletService;
     protected $walletManager;
+    protected $transferService;
 
     public function __construct(
         WalletService $walletService,
-        WalletManager $walletManager
+        WalletManager $walletManager,
+        TransferService $transferService
+        
     ) {
         $this->walletService = $walletService;
         $this->walletManager = $walletManager;
+        $this->transferService = $transferService;
     }
 
     public function index()
@@ -36,4 +44,53 @@ class WalletController extends Controller
 
         return new WalletResource($wallet);
     }
+      public function transfer(TransferRequest $request)
+    {
+    $transaction = $this->transferService->transfer(
+        $request->user(),
+        $request->to_user_id,
+        $request->amount
+    );
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Transfer successful',
+        'data' => $transaction
+    ]);
+   }
+public function withdraw(WithdrawRequest $request)
+{
+    $user = $request->user();
+    $amount = $request->amount;
+    $phone = $request->phone;
+
+    $wallet = \App\Models\Wallet::where('user_id', $user->id)->first();
+
+    if (!$wallet || $wallet->balance < $amount) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Insufficient balance'
+        ], 400);
+    }
+
+    $wallet->decrement('balance', $amount);
+
+    $transaction = Transaction::create([
+        'from_user_id' => $user->id,
+        'to_user_id' => null,
+        'amount' => $amount,
+        'type' => 'withdraw',
+        'status' => 'pending',
+        'provider' => 'manual',
+        'meta' => json_encode([
+            'phone' => $phone
+        ])
+    ]);
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Withdraw request submitted',
+        'transaction_id' => $transaction->id
+    ]);
+}
 }

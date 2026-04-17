@@ -30,32 +30,39 @@ public function createWallet($user)
         return (float) $user->wallet->balance;
     }
 
-    public function credit($user, float $amount): void
-    {
-        if ($amount <= 0) {
-            throw new Exception('Invalid amount');
-        }
-
-        $user->wallet->increment('balance', $amount);
-
-        $this->touch($user);
+   public function credit($user, float $amount): void
+{
+    if ($amount <= 0) {
+        throw new Exception('Invalid amount');
     }
+    if (!$user->wallet) {
+        $this->createWallet($user);
+        $user->refresh();
+    }
+
+    $user->wallet->increment('balance', $amount);
+
+    $this->touch($user);
+}
 
     public function debit($user, float $amount): void
-    {
-        if ($amount <= 0) {
-            throw new Exception('Invalid amount');
-        }
-
-        if ($user->wallet->balance < $amount) {
-            throw new Exception('Insufficient balance');
-        }
-
-        $user->wallet->decrement('balance', $amount);
-
-        $this->touch($user);
+{
+    if ($amount <= 0) {
+        throw new Exception('Invalid amount');
     }
 
+    if (!$user->wallet) {
+        throw new Exception('Wallet not found');
+    }
+
+    if ($user->wallet->balance < $amount) {
+        throw new Exception('Insufficient balance');
+    }
+
+    $user->wallet->decrement('balance', $amount);
+
+    $this->touch($user);
+}
     private function touch($user): void
     {
         $user->wallet->update([

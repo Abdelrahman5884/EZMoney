@@ -14,26 +14,34 @@ class WalletManager
     }
 
     public function safeCredit($user, float $amount)
-    {
-        return DB::transaction(function () use ($user, $amount) {
+{
+    return DB::transaction(function () use ($user, $amount) {
 
-            $wallet = $user->wallet()->lockForUpdate()->first();
+        if (!$user->wallet) {
+            $this->walletService->createWallet($user);
+            $user->refresh();
+        }
 
-            $this->walletService->credit($user, $amount);
+        $wallet = $user->wallet()->lockForUpdate()->first();
 
-            return $wallet->fresh();
-        });
-    }
+        $this->walletService->credit($user, $amount);
 
+        return $wallet->fresh();
+    });
+}
     public function safeDebit($user, float $amount)
-    {
-        return DB::transaction(function () use ($user, $amount) {
+{
+    return DB::transaction(function () use ($user, $amount) {
 
-            $wallet = $user->wallet()->lockForUpdate()->first();
+        if (!$user->wallet) {
+            throw new Exception('Wallet not found');
+        }
 
-            $this->walletService->debit($user, $amount);
+        $wallet = $user->wallet()->lockForUpdate()->first();
 
-            return $wallet->fresh();
-        });
-    }
+        $this->walletService->debit($user, $amount);
+
+        return $wallet->fresh();
+    });
+}
 }
