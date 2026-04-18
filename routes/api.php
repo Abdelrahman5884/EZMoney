@@ -7,7 +7,7 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\auth\AuthController;
 use App\Http\Controllers\Wallet\WalletController;
 use App\Http\Controllers\Security\PinController;
 
