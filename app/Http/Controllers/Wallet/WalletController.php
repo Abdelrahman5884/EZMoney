@@ -11,6 +11,7 @@ use App\Services\Wallet\TransferService;
 use App\Http\Requests\Wallet\TransferRequest;
 use App\Http\Requests\Wallet\WithdrawRequest;
 use App\Models\Transaction;
+use App\Models\Wallet;
 
 class WalletController extends Controller
 {
@@ -64,7 +65,7 @@ public function withdraw(WithdrawRequest $request)
     $amount = $request->amount;
     $phone = $request->phone;
 
-    $wallet = \App\Models\Wallet::where('user_id', $user->id)->first();
+    $wallet = Wallet::where('user_id', $user->id)->first();
 
     if (!$wallet || $wallet->balance < $amount) {
         return response()->json([
